@@ -9,6 +9,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 Option Explicit
 
+' Formのベース(Shape)の原点を元の位置に戻す
 Private Sub Worksheet_Activate()
     Me.Shapes(1).Top = 0.75
     Me.Shapes(1).Left = 0.75

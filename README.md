@@ -2,6 +2,9 @@
 
 ![image](https://user-images.githubusercontent.com/33306175/126576734-e6b0f99b-12b7-4802-9dcb-198e16554a25.png)
 
+![image](https://user-images.githubusercontent.com/33306175/126884919-662004be-fe31-4a6d-839e-9f78d870d94e.png)
+
+
 ## はじめに
 
 最近PowerShellを使い始めて、Formのデザインがあまりにも苦行だったので、

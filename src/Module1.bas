@@ -1,14 +1,17 @@
 Attribute VB_Name = "Module1"
 Option Explicit
 
-Public Const cVersion           As String = "1.0.0"
+Public Const cVersion           As String = "1.1.0"
 
 Private Const cFormName         As String = "Form1"
 
 Private Const cForm             As String = "System.Windows.Forms"
 Private Const cDraw             As String = "System.Drawing"
 
-'w’è‚ÌƒV[ƒg‚É”z’u‚µ‚½ƒRƒ“ƒgƒ[ƒ‹‚ğƒXƒLƒƒƒ“‚µAPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+Public sTmpPath                 As String
+Public oProcess                 As WshExec
+
+'æŒ‡å®šã®ã‚·ãƒ¼ãƒˆã«é…ç½®ã—ãŸã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’ã‚¹ã‚­ãƒ£ãƒ³ã—ã€PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Public Function GenPSCode(loWs As Worksheet) As String
     Dim lsStr                   As String
     Dim lsCtl                   As String
@@ -17,9 +20,11 @@ Public Function GenPSCode(loWs As Worksheet) As String
     Dim i                       As Integer
     
     ReDim lvCtl(0)
+    AddLine lsStr, "## .NETã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ãƒ­ãƒ¼ãƒ‰ ####################################################"
     AddLine lsStr, "Add-Type -AssemblyName System.Windows.Forms"
     AddLine lsStr, "Add-Type -AssemblyName System.Drawing"
     AddLine lsStr
+    AddLine lsStr, "## ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾© ############################################################"
     With loWs
         For Each o In .OLEObjects
             If o.OLEType = 2 Then
@@ -45,9 +50,10 @@ Public Function GenPSCode(loWs As Worksheet) As String
                     Case Else
                         lsCtl = ""
                 End Select
-                lsStr = lsStr & lsCtl
+                AddLine lsStr, lsCtl, False
             End If
         Next
+        AddLine lsStr, "## Formå®šç¾© ####################################################################"
         AddLine lsStr, "[" & cForm & ".Form]$form = New-Object " & cForm & ".Form"
         AddLine lsStr, "$form.Text = """ & cFormName & """"
         If .Shapes.Count > 0 Then
@@ -55,61 +61,66 @@ Public Function GenPSCode(loWs As Worksheet) As String
         End If
         AddLine lsStr
     End With
+    AddLine lsStr, "# Formã«ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’ç™»éŒ²"
     For i = 1 To UBound(lvCtl)
         AddLine lsStr, "$form.Controls.Add(" & lvCtl(i) & ")"
     Next
     AddLine lsStr
+    AddLine lsStr, "# Formã‚’è¡¨ç¤º"
     AddLine lsStr, "$form.ShowDialog()"
     GenPSCode = lsStr
 End Function
 
-' ƒ‰ƒxƒ‹ƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒ©ãƒ™ãƒ«ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateLabel(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒ©ãƒ™ãƒ«ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".Label]" & lsVar & " = New-Object " & cForm & ".Label"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & CtrlFont(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, CtrlFont(loCtl), False
     AddLine lsStr, lsVar & ".Text = """ & loCtl.Object.Caption & """"
     AddLine lsStr
     CreateLabel = lsStr
 End Function
 
-' ƒ{ƒ^ƒ“ƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒœã‚¿ãƒ³ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateButton(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒœã‚¿ãƒ³ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".Button]" & lsVar & " = New-Object " & cForm & ".Button"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & CtrlFont(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, CtrlFont(loCtl), False
     AddLine lsStr, lsVar & ".Text = """ & loCtl.Object.Caption & """"
     AddLine lsStr
     CreateButton = lsStr
 End Function
 
-' ƒeƒLƒXƒgƒ{ƒbƒNƒXƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒ†ã‚­ã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateTextBox(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒ†ã‚­ã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".TextBox]" & lsVar & " = New-Object " & cForm & ".TextBox"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & CtrlFont(loCtl)
-    lsStr = lsStr & lsVar & ".MultiLine = "
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, CtrlFont(loCtl), False
+    AddLine lsStr, lsVar & ".MultiLine = ", False
     If loCtl.Object.MultiLine Then
         AddLine lsStr, "$true"
     Else
         AddLine lsStr, "$false"
     End If
-    lsStr = lsStr & lsVar & ".ScrollBars = [" & cForm & ".ScrollBars]::"
+    AddLine lsStr, lsVar & ".ScrollBars = [" & cForm & ".ScrollBars]::", False
     Select Case loCtl.Object.ScrollBars
         Case fmScrollBarsNone
             AddLine lsStr, "None"
@@ -124,84 +135,90 @@ Private Function CreateTextBox(loCtl As OLEObject, lvCtl As Variant) As String
     CreateTextBox = lsStr
 End Function
 
-' ƒRƒ“ƒ{ƒ{ƒbƒNƒXƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ã‚³ãƒ³ãƒœãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateComboBox(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ã‚³ãƒ³ãƒœãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".ComboBox]" & lsVar & " = New-Object " & cForm & ".ComboBox"
-    lsStr = lsStr & CtrlGeometry(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
     AddLine lsStr, CtrlFont(loCtl)
     CreateComboBox = lsStr
 End Function
 
-' ƒŠƒXƒgƒ{ƒbƒNƒXƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateListBox(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".ListBox]" & lsVar & " = New-Object " & cForm & ".ListBox"
-    lsStr = lsStr & CtrlGeometry(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
     AddLine lsStr, CtrlFont(loCtl)
     CreateListBox = lsStr
 End Function
 
-' ƒ`ƒFƒbƒNƒ{ƒbƒNƒXƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒã‚§ãƒƒã‚¯ãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateCheckBox(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒã‚§ãƒƒã‚¯ãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".CheckBox]" & lsVar & " = New-Object " & cForm & ".CheckBox"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & CtrlFont(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, CtrlFont(loCtl), False
     AddLine lsStr, lsVar & ".Text = """ & loCtl.Object.Caption & """"
     AddLine lsStr
     CreateCheckBox = lsStr
 End Function
 
-' ƒ‰ƒWƒIƒ{ƒ^ƒ“ƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒ©ã‚¸ã‚ªãƒœã‚¿ãƒ³ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateRadioButton(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒ©ã‚¸ã‚ªãƒœã‚¿ãƒ³ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".RadioButton]" & lsVar & " = New-Object " & cForm & ".RadioButton"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & CtrlFont(loCtl)
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, CtrlFont(loCtl), False
     AddLine lsStr, lsVar & ".Text = """ & loCtl.Object.Caption & """"
     AddLine lsStr
     CreateRadioButton = lsStr
 End Function
 
-' ƒvƒƒOƒŒƒXƒo[ƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒ—ãƒ­ã‚°ãƒ¬ã‚¹ãƒãƒ¼ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreateProgressBar(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
     
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒ—ãƒ­ã‚°ãƒ¬ã‚¹ãƒãƒ¼ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".ProgressBar]" & lsVar & " = New-Object " & cForm & ".ProgressBar"
     AddLine lsStr, CtrlGeometry(loCtl)
     CreateProgressBar = lsStr
 End Function
 
-' ƒsƒNƒ`ƒƒƒ{ƒbƒNƒXƒRƒ“ƒgƒ[ƒ‹‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ãƒ”ã‚¯ãƒãƒ£ãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CreatePictureBox(loCtl As OLEObject, lvCtl As Variant) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
 
     lsVar = "$" & loCtl.Name
     PushArray lvCtl, lsVar
+    AddLine lsStr, "# ãƒ”ã‚¯ãƒãƒ£ãƒœãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«å®šç¾©"
     AddLine lsStr, "[" & cForm & ".PictureBox]" & lsVar & " = New-Object " & cForm & ".PictureBox"
-    lsStr = lsStr & CtrlGeometry(loCtl)
-    lsStr = lsStr & lsVar & ".BorderStyle = [" & cForm & ".BorderStyle]::"
+    AddLine lsStr, CtrlGeometry(loCtl), False
+    AddLine lsStr, lsVar & ".BorderStyle = [" & cForm & ".BorderStyle]::", False
     Select Case loCtl.Object.BorderStyle
         Case fmBorderStyleNone
             AddLine lsStr, "None"
@@ -212,7 +229,7 @@ Private Function CreatePictureBox(loCtl As OLEObject, lvCtl As Variant) As Strin
     CreatePictureBox = lsStr
 End Function
 
-' ƒRƒ“ƒgƒ[ƒ‹‚ÌƒWƒIƒƒgƒŠî•ñ‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ã‚¸ã‚ªãƒ¡ãƒˆãƒªæƒ…å ±ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CtrlGeometry(loCtl As OLEObject) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
@@ -223,7 +240,7 @@ Private Function CtrlGeometry(loCtl As OLEObject) As String
     CtrlGeometry = lsStr
 End Function
 
-' ƒRƒ“ƒgƒ[ƒ‹‚ÌƒtƒHƒ“ƒgî•ñ‚ğPowerShellƒXƒNƒŠƒvƒg‚É•ÏŠ·‚·‚é
+' ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ãƒ•ã‚©ãƒ³ãƒˆæƒ…å ±ã‚’PowerShellã‚¹ã‚¯ãƒªãƒ—ãƒˆã«å¤‰æ›ã™ã‚‹
 Private Function CtrlFont(loCtl As OLEObject) As String
     Dim lsStr                   As String
     Dim lsVar                   As String
@@ -233,19 +250,21 @@ Private Function CtrlFont(loCtl As OLEObject) As String
     CtrlFont = lsStr
 End Function
 
-' ”z—ñ‚ğŠg’£‚µA––”ö‚É’l‚ğ“ü‚ê‚é
+' é…åˆ—ã‚’æ‹¡å¼µã—ã€æœ«å°¾ã«å€¤ã‚’å…¥ã‚Œã‚‹
 Private Sub PushArray(lvArr, lvVal)
     ReDim Preserve lvArr(UBound(lvArr) + 1)
     lvArr(UBound(lvArr)) = lvVal
 End Sub
 
-'•¶š—ñ‚ğ˜AŒ‹‚µA––”ö‚É‰üsƒR[ƒh‚ğ‘}“ü‚·‚é
-Private Sub AddLine(lsSrc As String, Optional ByVal lsStr As String = "")
-    lsSrc = lsSrc & lsStr & vbCrLf
+'æ–‡å­—åˆ—ã‚’é€£çµã—ã€æœ«å°¾ã«æ”¹è¡Œã‚³ãƒ¼ãƒ‰ã‚’æŒ¿å…¥ã™ã‚‹
+Private Sub AddLine(lsSrc As String, Optional ByVal lsStr As String = "", Optional lbCrLf As Boolean = True)
+    lsSrc = lsSrc & lsStr
+    If lbCrLf Then lsSrc = lsSrc & vbCrLf
 End Sub
 
-'ƒ|ƒCƒ“ƒg”‚ğƒsƒNƒZƒ‹‚É•ÏŠ·
+'ãƒã‚¤ãƒ³ãƒˆæ•°ã‚’ãƒ”ã‚¯ã‚»ãƒ«ã«å¤‰æ›
 Private Function Pts2Pxl(lfPoint As Double) As Long
     Pts2Pxl = Int(lfPoint / 0.75)
 End Function
+
 

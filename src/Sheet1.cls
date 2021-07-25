@@ -20,21 +20,18 @@ Private Sub CommandButton2_Click()
         .SetText Me.TextBox1.Text
         .PutInClipboard
     End With
-    MsgBox "ÉNÉäÉbÉvÉ{Å[ÉhÇ…ÉRÉsÅ[ÇµÇ‹ÇµÇΩÅB", vbInformation, ThisWorkbook.Name
+    MsgBox "„ÇØ„É™„ÉÉ„Éó„Éú„Éº„Éâ„Å´„Ç≥„Éî„Éº„Åó„Åæ„Åó„Åü„ÄÇ", vbInformation, ThisWorkbook.Name
 End Sub
 
 Private Sub CommandButton3_Click()
-    Dim lsPath              As String
-    
     With New FileSystemObject
-        lsPath = .GetSpecialFolder(2).Path & "\" & .GetBaseName(.GetTempName) & ".ps1"
-        With .CreateTextFile(lsPath, True)
+        sTmpPath = .GetSpecialFolder(2).Path & "\" & .GetBaseName(.GetTempName) & ".ps1"
+        With .CreateTextFile(sTmpPath, True)
             .Write Me.TextBox1.Text
             .Close
         End With
         With New WshShell
-            .Run "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden " & lsPath, 1, True
+            Set oProcess = .Exec("powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden " & sTmpPath)
         End With
-        .DeleteFile lsPath
     End With
 End Sub
